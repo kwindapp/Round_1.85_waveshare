@@ -21,7 +21,7 @@ extern const lv_font_t ui_font_Hollow22;
 extern const lv_font_t ui_font_Hollow38;
 extern const lv_font_t ui_font_Hollow85;
 
-// You forgot this: (needed for "RAUH Welt BEGRIFF")
+// Needed for "RAUH Welt BEGRIFF"
 extern const lv_font_t ui_font_t20;
 
 //==================================================
@@ -36,15 +36,15 @@ extern const lv_font_t ui_font_t20;
 #define TICK_COLOR      0xD6CFCB
 
 // NUMBERS
-#define NUMBER_COLOR    0xE6DFD8
+#define NUMBER_COLOR    0xB3B9C4
 
 // RPM TEXT
-#define RPM_TEXT_COLOR  0xE6DFD8
+#define RPM_TEXT_COLOR  0xDBD3D3
 
 // NAME TEXT
 #define NAME_COLOR      0x85807F
-#define NAME_COLOR1     0x000000   // Black
-#define NAME_COLOR2     0x000000 
+#define NAME_COLOR1     0x3B3333   // RAUH Welt
+#define NAME_COLOR2     0x3B3333   // rwb janine
 
 // ARC COLORS
 #define ARC_GREEN       0x21543A
@@ -61,10 +61,12 @@ extern const lv_font_t ui_font_t20;
 //==================================================
 //           EASY LABEL POSITION SETTINGS
 //==================================================
-static const int RPM_Y_OFFSET   =  50;
-static const int NAME_Y_OFFSET  = -50;   // "911 RWB"
-static const int NAME1_Y_OFFSET = 100;   // "rwb janine"
-static const int NAME2_Y_OFFSET = 120;   // "RAUH Welt BEGRIFF"
+static const int RPM_Y_OFFSET    =  50;
+
+static const int NAME0_Y_OFFSET  = -72;  // "porsche"
+static const int NAME_Y_OFFSET   = -33;  // "911"
+static const int NAME1_Y_OFFSET  = 100;  // "rwb janine"
+static const int NAME2_Y_OFFSET  = 130;  // "RAUH Welt BEGRIFF"
 
 //==================================================
 //            ESP-NOW PACKET STRUCT
@@ -87,9 +89,10 @@ volatile uint16_t g_rpm = 0;
 static lv_obj_t *g_meter        = nullptr;
 static lv_meter_indicator_t *g_needle = nullptr;
 static lv_obj_t *g_rpm_label    = nullptr;
-static lv_obj_t *g_name_label   = nullptr;
-static lv_obj_t *g_name1_label  = nullptr;
-static lv_obj_t *g_name2_label  = nullptr;   // 🔥 NEW label added
+static lv_obj_t *g_name0_label  = nullptr;  // "porsche"
+static lv_obj_t *g_name_label   = nullptr;  // "911"
+static lv_obj_t *g_name1_label  = nullptr;  // "rwb janine"
+static lv_obj_t *g_name2_label  = nullptr;  // "RAUH Welt BEGRIFF"
 static lv_obj_t *g_center       = nullptr;
 
 static void meter_event_cb(lv_event_t * e);
@@ -159,21 +162,28 @@ void Lvgl_ShowGauge() {
   lv_obj_set_style_text_color(g_rpm_label, lv_color_hex(RPM_TEXT_COLOR), 0);
   lv_obj_align(g_rpm_label, LV_ALIGN_CENTER, 0, RPM_Y_OFFSET);
 
-  // MAIN NAME LABEL (911 RWB)
+  // "porsche" (small above 911)
+  g_name0_label = lv_label_create(g_meter);
+  lv_label_set_text(g_name0_label, "911");
+  lv_obj_set_style_text_font(g_name0_label, &ui_font_Hollow85, 0);
+  lv_obj_set_style_text_color(g_name0_label, lv_color_hex(NAME_COLOR), 0);
+  lv_obj_align(g_name0_label, LV_ALIGN_CENTER, 0, NAME0_Y_OFFSET);
+
+  // "911"
   g_name_label = lv_label_create(g_meter);
-  lv_label_set_text(g_name_label, "911 RWB");
-  lv_obj_set_style_text_font(g_name_label, &ui_font_Hollow85, 0);
+  lv_label_set_text(g_name_label, "porsche");
+  lv_obj_set_style_text_font(g_name_label, &ui_font_Hollow38, 0);
   lv_obj_set_style_text_color(g_name_label, lv_color_hex(NAME_COLOR), 0);
   lv_obj_align(g_name_label, LV_ALIGN_CENTER, 0, NAME_Y_OFFSET);
 
-  // SECOND NAME LABEL (rwb janine)
+  // "rwb janine"
   g_name1_label = lv_label_create(g_meter);
   lv_label_set_text(g_name1_label, "rwb janine");
-  lv_obj_set_style_text_font(g_name1_label, &ui_font_Hollow22, 0);
+  lv_obj_set_style_text_font(g_name1_label, &ui_font_Hollow38, 0);
   lv_obj_set_style_text_color(g_name1_label, lv_color_hex(NAME_COLOR2), 0);
   lv_obj_align(g_name1_label, LV_ALIGN_CENTER, 0, NAME1_Y_OFFSET);
 
-  // THIRD NAME LABEL (RAUH WELT BEGRIFF)
+  // "RAUH Welt BEGRIFF"
   g_name2_label = lv_label_create(g_meter);
   lv_label_set_text(g_name2_label, "RAUH Welt BEGRIFF");
   lv_obj_set_style_text_font(g_name2_label, &ui_font_t20, 0);
