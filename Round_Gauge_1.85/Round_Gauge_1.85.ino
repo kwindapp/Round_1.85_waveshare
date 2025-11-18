@@ -21,27 +21,32 @@ extern const lv_font_t ui_font_Hollow22;
 extern const lv_font_t ui_font_Hollow38;
 extern const lv_font_t ui_font_Hollow85;
 
+// You forgot this: (needed for "RAUH Welt BEGRIFF")
+extern const lv_font_t ui_font_t20;
+
 //==================================================
 //              GLOBAL COLOR FLAGS
 //==================================================
 
 // SCREEN BG
-#define SCR_BG_TOP      0x101018
-#define SCR_BG_BOTTOM   0x85807F
+#define SCR_BG_TOP      0x141414
+#define SCR_BG_BOTTOM   0x857B7A
 
-// TICKS (lines)
+// TICKS
 #define TICK_COLOR      0xD6CFCB
 
-// NUMBERS (0–8)
+// NUMBERS
 #define NUMBER_COLOR    0xE6DFD8
 
-// RPM TEXT COLOR
+// RPM TEXT
 #define RPM_TEXT_COLOR  0xE6DFD8
 
-// NAME LABEL COLOR
+// NAME TEXT
 #define NAME_COLOR      0x85807F
+#define NAME_COLOR1     0x000000   // Black
+#define NAME_COLOR2     0x000000 
 
-// ARC ZONES
+// ARC COLORS
 #define ARC_GREEN       0x21543A
 #define ARC_YELLOW      0x807116
 #define ARC_RED         0xA64E12
@@ -50,14 +55,16 @@ extern const lv_font_t ui_font_Hollow85;
 #define NEEDLE_COLOR    0xFF4444
 
 // CENTER HUB COLORS
-#define HUB_BG          0x3B3734
-#define HUB_BORDER      0x1F1D1C
+#define HUB_BG          0x141414
+#define HUB_BORDER      0x403B3B
 
 //==================================================
 //           EASY LABEL POSITION SETTINGS
 //==================================================
-static const int RPM_Y_OFFSET  =  60;   // RPM text relative to center
-static const int NAME_Y_OFFSET = -60;   // "911 RWB" relative to center
+static const int RPM_Y_OFFSET   =  50;
+static const int NAME_Y_OFFSET  = -50;   // "911 RWB"
+static const int NAME1_Y_OFFSET = 100;   // "rwb janine"
+static const int NAME2_Y_OFFSET = 120;   // "RAUH Welt BEGRIFF"
 
 //==================================================
 //            ESP-NOW PACKET STRUCT
@@ -77,11 +84,13 @@ volatile uint16_t g_rpm = 0;
 //==================================================
 //                 GAUGE OBJECTS
 //==================================================
-static lv_obj_t *g_meter      = nullptr;
+static lv_obj_t *g_meter        = nullptr;
 static lv_meter_indicator_t *g_needle = nullptr;
-static lv_obj_t *g_rpm_label  = nullptr;  // dynamic RPM text
-static lv_obj_t *g_name_label = nullptr;  // static "911 RWB"
-static lv_obj_t *g_center     = nullptr;
+static lv_obj_t *g_rpm_label    = nullptr;
+static lv_obj_t *g_name_label   = nullptr;
+static lv_obj_t *g_name1_label  = nullptr;
+static lv_obj_t *g_name2_label  = nullptr;   // 🔥 NEW label added
+static lv_obj_t *g_center       = nullptr;
 
 static void meter_event_cb(lv_event_t * e);
 
@@ -90,15 +99,14 @@ static void meter_event_cb(lv_event_t * e);
 //==================================================
 void Lvgl_ShowGauge() {
 
-  // Set SCREEN background color / gradient
+  // Screen background
   lv_obj_t *scr = lv_scr_act();
   lv_obj_set_style_bg_color(scr, lv_color_hex(SCR_BG_TOP), 0);
   lv_obj_set_style_bg_grad_color(scr, lv_color_hex(SCR_BG_BOTTOM), 0);
   lv_obj_set_style_bg_grad_dir(scr, LV_GRAD_DIR_VER, 0);
-  lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
 
   g_meter = lv_meter_create(scr);
-  lv_obj_set_size(g_meter, 360, 360);
+  lv_obj_set_size(g_meter, 350, 350);
   lv_obj_center(g_meter);
 
   // Gauge background
@@ -108,94 +116,76 @@ void Lvgl_ShowGauge() {
 
   lv_meter_scale_t *scale = lv_meter_add_scale(g_meter);
 
-  // Tick lines (minor)
-  lv_meter_set_scale_ticks(
-      g_meter, scale,
-      9,                      // ticks: 0..8
-      2,                      // line width
-      14,                     // line length
-      lv_color_hex(TICK_COLOR)
-  );
+  // Minor ticks
+  lv_meter_set_scale_ticks(g_meter, scale, 9, 2, 14, lv_color_hex(TICK_COLOR));
 
-  // Tick numbers 0–8 + major tick style
+  // Major ticks
   lv_meter_set_scale_major_ticks(
       g_meter, scale,
-      1,                      // every tick is major
-      6,                      // major tick width
-      24,                     // major tick length
-      lv_color_hex(TICK_COLOR), // this is MAJOR TICK LINE color
-      12                      // label distance
+      1, 6, 24,
+      lv_color_hex(TICK_COLOR),
+      12
   );
 
-  // *** HERE we style the NUMBER TEXT (0–8) ***
-  lv_obj_set_style_text_font(
-      g_meter,
-      &ui_font_Hollow38,           // font used for the 0–8 numbers
-      LV_PART_TICKS | LV_STATE_DEFAULT
-  );
-  lv_obj_set_style_text_color(
-      g_meter,
-      lv_color_hex(NUMBER_COLOR),  // color of the 0–8 numbers
-      LV_PART_TICKS | LV_STATE_DEFAULT
-  );
+  // Number styling
+  lv_obj_set_style_text_font(g_meter, &ui_font_Hollow38, LV_PART_TICKS);
+  lv_obj_set_style_text_color(g_meter, lv_color_hex(NUMBER_COLOR), LV_PART_TICKS);
 
-  // scale 0–8 over 270°
-  lv_meter_set_scale_range(
-      g_meter, scale,
-      0, 8,
-      270,
-      135
-  );
+  // Scale 0–8
+  lv_meter_set_scale_range(g_meter, scale, 0, 8, 270, 135);
 
-  // ARC zones
-  lv_meter_indicator_t *ind_green = lv_meter_add_arc(
-      g_meter, scale, 20, lv_color_hex(ARC_GREEN), 0);
+  // ARC green
+  lv_meter_indicator_t *ind_green = lv_meter_add_arc(g_meter, scale, 20, lv_color_hex(ARC_GREEN), 0);
   lv_meter_set_indicator_start_value(g_meter, ind_green, 0);
   lv_meter_set_indicator_end_value(g_meter, ind_green, 4);
 
-  lv_meter_indicator_t *ind_yellow = lv_meter_add_arc(
-      g_meter, scale, 24, lv_color_hex(ARC_YELLOW), 0);
+  // ARC yellow
+  lv_meter_indicator_t *ind_yellow = lv_meter_add_arc(g_meter, scale, 24, lv_color_hex(ARC_YELLOW), 0);
   lv_meter_set_indicator_start_value(g_meter, ind_yellow, 4);
   lv_meter_set_indicator_end_value(g_meter, ind_yellow, 6);
 
-  lv_meter_indicator_t *ind_red = lv_meter_add_arc(
-      g_meter, scale, 30, lv_color_hex(ARC_RED), 0);
+  // ARC red
+  lv_meter_indicator_t *ind_red = lv_meter_add_arc(g_meter, scale, 30, lv_color_hex(ARC_RED), 0);
   lv_meter_set_indicator_start_value(g_meter, ind_red, 6);
   lv_meter_set_indicator_end_value(g_meter, ind_red, 8);
 
   // Needle
-  g_needle = lv_meter_add_needle_line(
-      g_meter, scale,
-      6,                          // needle length from center
-      lv_color_hex(NEEDLE_COLOR),
-      -45
-  );
+  g_needle = lv_meter_add_needle_line(g_meter, scale, 6, lv_color_hex(NEEDLE_COLOR), -45);
 
   // RPM TEXT
   g_rpm_label = lv_label_create(g_meter);
-  lv_label_set_text(g_rpm_label, "0.0k");
-  lv_obj_set_style_text_font(g_rpm_label, &ui_font_Hollow85,
-                             LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_set_style_text_color(g_rpm_label, lv_color_hex(RPM_TEXT_COLOR),
-                              LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_label_set_text(g_rpm_label, "0000");
+  lv_obj_set_style_text_font(g_rpm_label, &ui_font_Hollow85, 0);
+  lv_obj_set_style_text_color(g_rpm_label, lv_color_hex(RPM_TEXT_COLOR), 0);
   lv_obj_align(g_rpm_label, LV_ALIGN_CENTER, 0, RPM_Y_OFFSET);
 
-  // NAME LABEL
+  // MAIN NAME LABEL (911 RWB)
   g_name_label = lv_label_create(g_meter);
   lv_label_set_text(g_name_label, "911 RWB");
-  lv_obj_set_style_text_font(g_name_label, &ui_font_Hollow85,
-                             LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_set_style_text_color(g_name_label, lv_color_hex(NAME_COLOR),
-                              LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_font(g_name_label, &ui_font_Hollow85, 0);
+  lv_obj_set_style_text_color(g_name_label, lv_color_hex(NAME_COLOR), 0);
   lv_obj_align(g_name_label, LV_ALIGN_CENTER, 0, NAME_Y_OFFSET);
 
-  // CENTER HUB CAP
+  // SECOND NAME LABEL (rwb janine)
+  g_name1_label = lv_label_create(g_meter);
+  lv_label_set_text(g_name1_label, "rwb janine");
+  lv_obj_set_style_text_font(g_name1_label, &ui_font_Hollow22, 0);
+  lv_obj_set_style_text_color(g_name1_label, lv_color_hex(NAME_COLOR2), 0);
+  lv_obj_align(g_name1_label, LV_ALIGN_CENTER, 0, NAME1_Y_OFFSET);
+
+  // THIRD NAME LABEL (RAUH WELT BEGRIFF)
+  g_name2_label = lv_label_create(g_meter);
+  lv_label_set_text(g_name2_label, "RAUH Welt BEGRIFF");
+  lv_obj_set_style_text_font(g_name2_label, &ui_font_t20, 0);
+  lv_obj_set_style_text_color(g_name2_label, lv_color_hex(NAME_COLOR1), 0);
+  lv_obj_align(g_name2_label, LV_ALIGN_CENTER, 0, NAME2_Y_OFFSET);
+
+  // CENTER HUB
   g_center = lv_obj_create(g_meter);
   lv_obj_set_size(g_center, 40, 40);
   lv_obj_center(g_center);
   lv_obj_set_style_radius(g_center, LV_RADIUS_CIRCLE, 0);
   lv_obj_set_style_bg_color(g_center, lv_color_hex(HUB_BG), 0);
-  lv_obj_set_style_bg_opa(g_center, LV_OPA_COVER, 0);
   lv_obj_set_style_border_color(g_center, lv_color_hex(HUB_BORDER), 0);
   lv_obj_set_style_border_width(g_center, 3, 0);
 
@@ -203,7 +193,7 @@ void Lvgl_ShowGauge() {
 }
 
 //==================================================
-//             TOUCH TO CHANGE RPM
+//           TOUCH TO CHANGE RPM (testing)
 //==================================================
 static void meter_event_cb(lv_event_t * e) {
   if (lv_event_get_code(e) == LV_EVENT_PRESSED) {
